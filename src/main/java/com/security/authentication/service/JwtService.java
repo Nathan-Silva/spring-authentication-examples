@@ -12,16 +12,25 @@ import java.util.Date;
 public class JwtService {
 
     private static final String SECRET_KEY = "MySuperStrongJwtSecretKey_32CharsLong!";
-    private static final long EXPIRATION_TIME = 1000 * 60 * 60;
+    private static final long ACCESS_TOKEN_EXPIRATION = 1000 * 60 * 15; // 15 minutos
+    private static final long REFRESH_TOKEN_EXPIRATION = 1000L * 60 * 60 * 24 * 7; // 7 dias
 
+    private final SecretKey key = Keys.hmacShaKeyFor(SECRET_KEY.getBytes());
 
-    public String generateToken(String username) {
-        SecretKey key = Keys.hmacShaKeyFor(SECRET_KEY.getBytes());
-
+    public String generateAccessToken(String username) {
         return Jwts.builder()
                 .setSubject(username)
                 .setIssuedAt(new Date())
-                .setExpiration(new Date(System.currentTimeMillis() + EXPIRATION_TIME))
+                .setExpiration(new Date(System.currentTimeMillis() + ACCESS_TOKEN_EXPIRATION))
+                .signWith(key)
+                .compact();
+    }
+
+    public String generateRefreshToken(String username) {
+        return Jwts.builder()
+                .setSubject(username)
+                .setIssuedAt(new Date())
+                .setExpiration(new Date(System.currentTimeMillis() + REFRESH_TOKEN_EXPIRATION))
                 .signWith(key)
                 .compact();
     }
@@ -29,7 +38,7 @@ public class JwtService {
     public boolean validateToken(String token) {
         try {
             Claims claims = Jwts.parserBuilder()
-                    .setSigningKey(SECRET_KEY.getBytes())
+                    .setSigningKey(key)
                     .build()
                     .parseClaimsJws(token)
                     .getBody();
@@ -41,11 +50,10 @@ public class JwtService {
 
     public String extractUsername(String token) {
         Claims claims = Jwts.parserBuilder()
-                .setSigningKey(SECRET_KEY.getBytes())
+                .setSigningKey(key)
                 .build()
                 .parseClaimsJws(token)
                 .getBody();
         return claims.getSubject();
     }
-
 }
